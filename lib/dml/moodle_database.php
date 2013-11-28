@@ -2127,6 +2127,45 @@ abstract class moodle_database {
     }
 
     /**
+     * Does this driver support tool_replace?
+     * @return bool
+     */
+    public function replace_all_text_supported() {
+        return false;
+    }
+
+    /**
+     * Replace given text in all rows of column.
+     * @param string $table name of the table
+     * @param database_column_info $column
+     * @param string $search
+     * @param string $replace
+     */
+    public function replace_all_text($table, database_column_info $column, $search, $replace) {
+        if (!$this->replace_all_text_supported()) {
+            return;
+        }
+
+        $columnname = $column->name;
+        $sql = "UPDATE {".$table."}
+                       SET $columnname = REPLACE($columnname, ?, ?)
+                     WHERE $columnname IS NOT NULL";
+
+        if ($column->meta_type === 'X') {
+            $this->execute($sql, array($search, $replace));
+
+        } else if ($column->meta_type === 'C') {
+            if (core_text::strlen($search) < core_text::strlen($replace)) {
+                $colsize = $column->max_length;
+                $sql = "UPDATE {".$table."}
+                       SET $columnname = SUBSTRING(REPLACE($columnname, ?, ?), 1, $colsize)
+                     WHERE $columnname IS NOT NULL";
+            }
+            $this->execute($sql, array($search, $replace));
+        }
+    }
+
+    /**
      * Checks and returns true if transactions are supported.
      *
      * It is not responsible to run productions servers
