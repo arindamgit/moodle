@@ -1424,6 +1424,8 @@ abstract class admin_setting {
     public $plugin; // null means main config table
     /** @var bool true indicates this setting does not actually save anything, just information */
     public $nosave = false;
+    /** @var string|bool tue means normal logging, false no logging and string is a replacement such as *** */
+    public $logvalue = true;
     /** @var bool if set, indicates that a change to this setting requires rebuild course cache */
     public $affectsmodinfo = false;
     /** @var array of admin_setting_flag - These are extra checkboxes attached to a setting. */
@@ -1660,7 +1662,14 @@ abstract class admin_setting {
             rebuild_course_cache(0, true);
         }
 
-        add_to_config_log($name, $oldvalue, $value, $this->plugin);
+        if ($this->logvalue === true) {
+            add_to_config_log($name, $oldvalue, $value, $this->plugin);
+        } else if ($this->logvalue === false) {
+            // Do not log anything!
+        } else {
+            // This is most probably a password.
+            add_to_config_log($name, $this->logvalue, $this->logvalue, $this->plugin);
+        }
 
         return true; // BC only
     }
@@ -2159,6 +2168,8 @@ class admin_setting_configpasswordunmask extends admin_setting_configtext {
      */
     public function __construct($name, $visiblename, $description, $defaultsetting) {
         parent::__construct($name, $visiblename, $description, $defaultsetting, PARAM_RAW, 30);
+        // We do not want the actual passwords in config logs.
+        $this->logvalue = '******';
     }
 
     /**
